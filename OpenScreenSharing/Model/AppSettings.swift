@@ -13,6 +13,7 @@ final class AppSettings {
         static let cursorStyle = "cursorStyle"
         static let pinchZooms = "pinchZooms"
         static let usesMacKeyboard = "usesMacKeyboard"
+        static let backgroundConnection = "backgroundConnection"
         static let macKeyboardLayout = "macKeyboardLayout"
         static let inputPanel = "inputPanel"
         static let showsKeyboardForTextFields = "showsKeyboardForTextFields"
@@ -45,6 +46,10 @@ final class AppSettings {
 
     var usesMacKeyboard: Bool {
         didSet { store.set(usesMacKeyboard, for: Key.usesMacKeyboard) }
+    }
+
+    var backgroundConnection: BackgroundConnection {
+        didSet { store.set(backgroundConnection, for: Key.backgroundConnection) }
     }
 
     var macKeyboardLayout: MacKeyboardLayoutID {
@@ -90,6 +95,7 @@ final class AppSettings {
         showsKeyboardForTextFields = store.value(Bool.self, for: Key.showsKeyboardForTextFields) ?? true
         pictureFillsScreen = store.value(Bool.self, for: Key.pictureFillsScreen) ?? true
         usesMacKeyboard = store.value(Bool.self, for: Key.usesMacKeyboard) ?? true
+        backgroundConnection = store.value(BackgroundConnection.self, for: Key.backgroundConnection) ?? .always
         macKeyboardLayout = store.value(MacKeyboardLayoutID.self, for: Key.macKeyboardLayout) ?? .preferred
         inputPanel = store.value(InputPanelPlacement.self, for: Key.inputPanel) ?? InputPanelPlacement()
         #endif

@@ -82,6 +82,13 @@ private struct ControlSettingsView: View {
                     Toggle(isOn: Binding(get: { settings.pinchZooms }, set: { settings.pinchZooms = $0 })) {
                         Label("Pinch to Zoom", systemImage: "arrow.up.left.and.down.right.magnifyingglass")
                     }
+                    Picker(selection: Binding(get: { settings.backgroundConnection }, set: { settings.backgroundConnection = $0 })) {
+                        ForEach(BackgroundConnection.allCases) { option in
+                            Text(String(localized: option.title)).tag(option)
+                        }
+                    } label: {
+                        Label("Stay Connected in Background", systemImage: "moon.zzz")
+                    }
                     Toggle(isOn: Binding(get: { settings.showsKeyboardForTextFields }, set: { settings.showsKeyboardForTextFields = $0 })) {
                         Label("Show Keyboard for Text Fields", systemImage: "keyboard")
                     }

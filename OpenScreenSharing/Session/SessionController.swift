@@ -265,6 +265,7 @@ final class SessionController: Identifiable {
     @PerceptionIgnored private var activeWhenBackgrounded = false
     #if os(iOS)
     @PerceptionIgnored private var backgroundTask = UIBackgroundTaskIdentifier.invalid
+    @PerceptionIgnored private let keepAlive = BackgroundKeepAlive()
     @PerceptionIgnored private var transferTask: ContinuedTask?
     @PerceptionIgnored private var transferTaskIDs: Set<Int64> = []
     #endif
@@ -353,6 +354,13 @@ final class SessionController: Identifiable {
 
     func start() {
         guard session == nil, probeTask == nil else { return }
+        #if os(iOS)
+        keepAlive.isWanted = { [weak self] in
+            guard let self else { return false }
+            return self.phase.isActive && !self.isClosing
+        }
+        keepAlive.onExpiry = { [weak self] in self?.closeIfSuspending() }
+        #endif
         if case .failed(let failure) = phase, failure.kind == .drawingFailed { return }
         let stored = computerID.flatMap { store.stored($0) }
         if let stored {
@@ -600,6 +608,9 @@ final class SessionController: Identifiable {
     }
 
     func abort() {
+        #if os(iOS)
+        keepAlive.stop()
+        #endif
         releaseAllKeys()
         isClosing = true
         teardown()
@@ -765,7 +776,7 @@ final class SessionController: Identifiable {
     fileprivate func closeIfSuspending() {
         #if os(iOS)
         guard sceneInBackground, phase.isActive, !reconnectsOnReturn, backgroundTask == .invalid,
-            transferTask?.isRunning != true, sink?.keepsAppRunning != true
+            transferTask?.isRunning != true, sink?.keepsAppRunning != true, !keepAlive.isActive
         else { return }
         #if DEBUG || SIDELOAD
         if ServerController.shared.keepsAppRunning { return }

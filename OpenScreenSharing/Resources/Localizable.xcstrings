@@ -609,6 +609,16 @@
         }
       }
     },
+    "1 Hour" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "1 Saat"
+          }
+        }
+      }
+    },
     "1. Go to Settings › Privacy & Security › Developer Mode.\n2. Tap “Pair with %@”.\n3. Enter the pairing code shown by Screen Sharing." : {
       "localizations" : {
         "ar" : {
@@ -909,6 +919,26 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "1. 前往「設定」>「隱私權與安全性」>「開發者模式」。\n2. 點一下「Pair with %@」。\n3. 輸入 Screen Sharing 顯示的配對碼。"
+          }
+        }
+      }
+    },
+    "10 Minutes" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "10 Dakika"
+          }
+        }
+      }
+    },
+    "30 Minutes" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "30 Dakika"
           }
         }
       }
@@ -10139,6 +10169,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "行為"
+          }
+        }
+      }
+    },
+    "Briefly" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Kısa Süre"
           }
         }
       }
@@ -101858,6 +101898,16 @@
         }
       }
     },
+    "Stay Connected in Background" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arka Planda Bağlı Kal"
+          }
+        }
+      }
+    },
     "Symbols" : {
       "localizations" : {
         "ar" : {
@@ -112818,6 +112868,16 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "不支援的 iPadOS 版本"
+          }
+        }
+      }
+    },
+    "Until Disconnected" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Bağlantı Kesilene Kadar"
           }
         }
       }
