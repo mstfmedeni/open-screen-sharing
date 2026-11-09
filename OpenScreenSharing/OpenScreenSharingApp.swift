@@ -1,7 +1,10 @@
 import Perception
 import SwiftUI
 
+// Embedded in another app (ScreenSharingKit), the host app has the entry point.
+#if !EMBEDDED
 @main
+#endif
 enum OpenScreenSharingMain {
     static func main() {
         #if os(iOS)

@@ -156,7 +156,10 @@ struct SessionView: View {
                     controller.start()
                 }
                 .onDisappear {
+                    // Embedded, the session belongs to ScreenSharingStore and outlives its view.
+                    #if !EMBEDDED
                     controller.abort()
+                    #endif
                 }
                 .onReceive(NotificationCenter.default.publisher(for: UIApplication.willTerminateNotification)) { _ in
                     controller.abort()
