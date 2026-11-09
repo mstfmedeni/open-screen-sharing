@@ -15,6 +15,7 @@ final class AppSettings {
         static let usesMacKeyboard = "usesMacKeyboard"
         static let macKeyboardLayout = "macKeyboardLayout"
         static let inputPanel = "inputPanel"
+        static let showsKeyboardForTextFields = "showsKeyboardForTextFields"
         static let pictureFillsScreen = "pictureFillsScreen"
         static let computerLayout = "computerLayout"
         static let computerOrder = "computerOrder"
@@ -32,6 +33,10 @@ final class AppSettings {
     #if os(iOS)
     var pinchZooms: Bool {
         didSet { store.set(pinchZooms, for: Key.pinchZooms) }
+    }
+
+    var showsKeyboardForTextFields: Bool {
+        didSet { store.set(showsKeyboardForTextFields, for: Key.showsKeyboardForTextFields) }
     }
 
     var pictureFillsScreen: Bool {
@@ -82,6 +87,7 @@ final class AppSettings {
         cursorStyle = store.value(CursorStyle.self, for: Key.cursorStyle) ?? .system
         #if os(iOS)
         pinchZooms = store.value(Bool.self, for: Key.pinchZooms) ?? (UIDevice.current.userInterfaceIdiom == .phone)
+        showsKeyboardForTextFields = store.value(Bool.self, for: Key.showsKeyboardForTextFields) ?? true
         pictureFillsScreen = store.value(Bool.self, for: Key.pictureFillsScreen) ?? true
         usesMacKeyboard = store.value(Bool.self, for: Key.usesMacKeyboard) ?? false
         macKeyboardLayout = store.value(MacKeyboardLayoutID.self, for: Key.macKeyboardLayout) ?? .preferred
