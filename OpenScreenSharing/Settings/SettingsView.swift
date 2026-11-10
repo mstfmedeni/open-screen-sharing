@@ -166,6 +166,8 @@ private struct AppSettingsView: View {
 
     var body: some View {
         Form {
+            // Embedded, the language is the host app's, set in its own settings.
+            #if !EMBEDDED
             Section {
                 Picker(selection: $language) {
                     Text(verbatim: AppLanguage.systemDefaultName(in: language)).tag(String?.none)
@@ -192,6 +194,7 @@ private struct AppSettingsView: View {
                     )
                 }
             }
+            #endif
             Section("Cache") {
                 LabeledContentCompat {
                     if let cacheSize {
