@@ -16,7 +16,14 @@ struct NewComputer: Hashable {
         saved.authenticates = account != nil
         saved.model = model ?? ""
         saved.trustedFingerprint = check.fingerprint
+        #if EMBEDDED
+        // Embedded, a Mac (account sign-in over VNC) starts as Apple VNC even when the check couldn't tell, as at its
+        // login window: the screen made for this device is what the host app is after.
+        saved.usesHighPerformance =
+            check.supportsHighPerformance || (server.remoteProtocol == .vnc && server.authentication.account)
+        #else
         saved.usesHighPerformance = check.supportsHighPerformance
+        #endif
         saved.usesNativeTouch = SessionMemory.defaultUsesNativeTouch
         return SignedInComputer(computer: saved, credentials: credentials, server: server.authentication)
     }
