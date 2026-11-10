@@ -69,18 +69,30 @@ public final class ScreenSharingStore {
             setup = SetupRequest(link: RemoteLink(string: "vnc://\(address)"), name: name)
             return
         }
+        connect(saved: computer)
+    }
+
+    /// A saved computer's route, upgraded to High Performance first when it takes it: one saved as plain VNC (set up
+    /// while the Mac was at its login window, say, where it can't tell) would show the Mac's own monitor shrunk
+    /// instead of a screen made for this device.
+    func connect(saved computer: Computer, route: SessionRoute? = nil) {
         guard computer.remoteProtocol == .vnc, !computer.usesHighPerformance, computer.authenticates,
             !computer.password.isEmpty
         else {
-            connect(SessionRoute(computer: computer))
+            connect(route ?? SessionRoute(computer: computer))
             return
         }
-        // Saved before it was checked, as connect(host:) used to; check it now with its saved password.
         upgrade?.cancel()
         upgrade = Task {
             let upgraded = await Self.upgradingToHighPerformance(computer)
             guard !Task.isCancelled else { return }
-            connect(SessionRoute(computer: upgraded))
+            guard upgraded.usesHighPerformance, var route else {
+                connect(SessionRoute(computer: upgraded))
+                return
+            }
+            route.usesHighPerformance = true
+            route.deviceType = upgraded.deviceType
+            connect(route)
         }
     }
 
@@ -125,9 +137,11 @@ public final class ScreenSharingStore {
 
     /// The computer saved for High Performance connections if it takes them, or as it was.
     private static func upgradingToHighPerformance(_ computer: Computer) async -> Computer {
+        // The address that answers, of a computer with several (the first may be another network's).
+        let host = await AddressRace.first(of: computer.hosts, port: computer.port) ?? computer.host
         guard
             case .success(let server) = await ServerProber.probe(
-                host: computer.host, port: computer.port, remoteProtocol: .vnc),
+                host: host, port: computer.port, remoteProtocol: .vnc),
             computer.trustedFingerprint.isEmpty || computer.trustedFingerprint == server.fingerprint,
             case .success(let check) = await ServerProber.checkLogin(
                 server, credentials: .account(username: computer.username, password: computer.password)),

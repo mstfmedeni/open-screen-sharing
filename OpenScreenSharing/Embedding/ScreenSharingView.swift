@@ -61,7 +61,13 @@ private struct ScreenSharingComputers: View {
     var body: some View {
         NavigationStack {
             ComputersView(
-                connect: { route in store.connect(route) },
+                connect: { route in
+                    if let id = route.computerID, let computer = ComputerStore.shared.computer(id) {
+                        store.connect(saved: computer, route: route)
+                    } else {
+                        store.connect(route)
+                    }
+                },
                 openInNewWindow: nil,
                 edit: { computer in store.editing = computer },
                 newConnection: { store.setup = SetupRequest() }
