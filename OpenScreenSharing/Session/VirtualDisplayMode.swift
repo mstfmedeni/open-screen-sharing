@@ -14,10 +14,13 @@ nonisolated struct VirtualDisplayMode: Hashable, Sendable {
 
     static let minimumWindowPoints = CGSize(width: minimumLongSide * 0.75, height: minimumShortSide * 0.75)
 
-    static let resolutionScaleRange: ClosedRange<Double> = 1...2
+    static let resolutionScaleRange: ClosedRange<Double> = 1...5
     static let resolutionScaleStep = 0.25
-    static let resolutionScales = Array(
-        stride(from: resolutionScaleRange.lowerBound, through: resolutionScaleRange.upperBound, by: resolutionScaleStep))
+    /// Quarter steps up to 2×, then coarser (a phone can want a lot more room than it has).
+    static let resolutionScales: [Double] = [1, 1.25, 1.5, 1.75, 2, 2.5, 3, 4, 5]
+    /// The most pixels on a side asked for (a 6K display's). Past it at two pixels per point the display drops to
+    /// one, so a high scale still gives that much more room, just not sharper; past it at one, it stops growing.
+    static let maximumPixelSide: CGFloat = 6016
     static let defaultResolutionScale: Double = 1
 
     init(width: Int, height: Int, density: Int) {
@@ -31,8 +34,14 @@ nonisolated struct VirtualDisplayMode: Hashable, Sendable {
         // ScreenSharing's -[SSSessionView setDynamicSize:] requests two pixels per point (ScreenSharing 776.27,
         // macOS 27.0.1 26A434, UUID EC0B2C20-F816-3FCE-822D-F9403C09EB50, -[SSSessionView setDynamicSize:]
         // 0x1cc0a3788..0x1cc0a37f0).
-        let density = screenScale >= 2 ? 2 : 1
-        let points = CGSize(width: area.width * resolutionScale, height: area.height * resolutionScale)
+        var density = screenScale >= 2 ? 2 : 1
+        var points = CGSize(width: area.width * resolutionScale, height: area.height * resolutionScale)
+        if max(points.width, points.height) * CGFloat(density) > Self.maximumPixelSide { density = 1 }
+        let largest = max(points.width, points.height) * CGFloat(density)
+        if largest > Self.maximumPixelSide {
+            let fit = Self.maximumPixelSide / largest
+            points = CGSize(width: points.width * fit, height: points.height * fit)
+        }
         let grow = max(
             1, Self.minimumLongSide / max(points.width, points.height), Self.minimumShortSide / min(points.width, points.height))
         self.init(

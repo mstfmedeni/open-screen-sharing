@@ -1696,6 +1696,16 @@ final class SessionController: Identifiable {
 
     func displayAreaDidChange(_ area: CGSize, scale: CGFloat, screen: CGSize) {
         guard area.width > 0, area.height > 0 else { return }
+        #if os(iOS)
+        // A keyboard or the input panel takes part of the area only for a while: the computer's display keeps its size
+        // and the picture fits what's left, rather than the display being resized on the way in and again on the way
+        // out. A rotation or another window size (a different screen) still resizes it.
+        if showsKeyboard || isInputPanelVisible, displayArea.width > 0, scale == displayScale, screen == screenSize,
+            area.width <= displayArea.width + 1, area.height <= displayArea.height + 1
+        {
+            return
+        }
+        #endif
         displayArea = area
         displayScale = scale
         screenSize = screen
