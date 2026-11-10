@@ -31,11 +31,17 @@ struct SignedInComputer: Hashable {
 struct SetupRequest: Identifiable {
     let id = UUID()
     var link: RemoteLink?
+    /// The name the new connection starts with (an embedding app knows the computer's).
+    var name: String?
+    /// Only save the connection, don't connect (an embedding app adding it to the list).
+    var savesOnly = false
 }
 
 struct ConnectionSetupView: View {
     let link: RemoteLink?
-    let connect: (SessionRoute) -> Void
+    var name: String? = nil
+    /// nil: the connection is only saved.
+    let connect: ((SessionRoute) -> Void)?
 
     @Environment(\.dismiss) private var dismiss
     @Environment(NearbyBrowser.self) private var nearby
@@ -86,6 +92,12 @@ struct ConnectionSetupView: View {
     }
 
     private func configure(_ computer: SignedInComputer) {
+        var computer = computer
+        if let name = name?.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty {
+            var named = computer.computer
+            named.name = name
+            computer = SignedInComputer(computer: named, credentials: computer.credentials, server: computer.server)
+        }
         withAnimation {
             detent = .large
             signedIn = computer

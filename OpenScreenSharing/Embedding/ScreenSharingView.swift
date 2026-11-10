@@ -26,9 +26,9 @@ public struct ScreenSharingView: View {
         .modifier(StorageNoticeAlert())
         .alert($store.alert)
         .sheet(item: $store.setup) { request in
-            ConnectionSetupView(link: request.link) { route in
+            ConnectionSetupView(link: request.link, name: request.name, connect: request.savesOnly ? nil : { route in
                 store.connect(route)
-            }
+            })
         }
         .sheet(item: $store.editing) { computer in
             ComputerEditor(computer: computer)

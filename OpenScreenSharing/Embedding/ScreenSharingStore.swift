@@ -64,7 +64,7 @@ public final class ScreenSharingStore {
         guard let computer = ComputerStore.shared.computer(at: address, remoteProtocol: .vnc, username: nil) else {
             // A computer not set up yet goes through the app's own setup, which signs in once, finds whether the
             // computer takes High Performance connections, and saves it with its options.
-            setup = SetupRequest(link: RemoteLink(string: "vnc://\(address)"))
+            setup = SetupRequest(link: RemoteLink(string: "vnc://\(address)"), name: name)
             return
         }
         guard computer.remoteProtocol == .vnc, !computer.usesHighPerformance, computer.authenticates,
@@ -80,6 +80,23 @@ public final class ScreenSharingStore {
             guard !Task.isCancelled else { return }
             connect(SessionRoute(computer: upgraded))
         }
+    }
+
+    /// Whether a Screen Sharing connection to `host` is in the list (observable: views update when one is saved).
+    public func isSaved(host: String, port: Int? = nil) -> Bool {
+        let address = ComputerAddress(host: host, port: port ?? ComputerAddress.defaultPort)
+        return ComputerStore.shared.computers.contains { $0.remoteProtocol == .vnc && $0.address.matches(address) }
+    }
+
+    /// Puts the computer at `host` in the list without connecting: the usual setup (signing in once, checking for
+    /// High Performance) ending in Save. One already there opens its options instead.
+    public func add(host: String, port: Int? = nil, name: String? = nil) {
+        let address = ComputerAddress(host: host, port: port ?? ComputerAddress.defaultPort)
+        if let computer = ComputerStore.shared.computer(at: address, remoteProtocol: .vnc, username: nil) {
+            editing = computer
+            return
+        }
+        setup = SetupRequest(link: RemoteLink(string: "vnc://\(address)"), name: name, savesOnly: true)
     }
 
     /// The computer saved for High Performance connections if it takes them, or as it was.

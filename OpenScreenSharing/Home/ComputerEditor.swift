@@ -7,7 +7,8 @@ struct ComputerEditor: View {
     struct Setup {
         var credentials: SessionCredentials
         var server: ServerAuthentication?
-        var connect: (SessionRoute) -> Void
+        /// nil: the computer is only saved (an embedding app adding it to the list).
+        var connect: ((SessionRoute) -> Void)?
     }
 
     @Environment(\.dismiss) private var dismiss
@@ -185,6 +186,9 @@ struct ComputerEditor: View {
                     if setup == nil {
                         Button("Save", role: .confirmCompat, action: save)
                             .disabled(!isComplete)
+                    } else if setup?.connect == nil {
+                        Button("Save", role: .confirmCompat, action: save)
+                            .keyboardShortcut(.defaultAction)
                     } else {
                         Button("Connect", role: .confirmCompat, action: save)
                             .keyboardShortcut(.defaultAction)
@@ -233,11 +237,11 @@ struct ComputerEditor: View {
             alert = AlertState(String(localized: "Couldn’t Save “\(name)”"), error: error)
             return
         }
-        if let setup {
+        if let setup, let connect = setup.connect {
             var route = SessionRoute(computer: computer)
             route.credentials = setup.credentials
             route.server = setup.server
-            setup.connect(route)
+            connect(route)
         }
         dismiss()
     }
