@@ -21,6 +21,7 @@ struct ComputerEditor: View {
     @State private var networkConfiguration: NetworkConfiguration
     @State private var keepsAlive: Bool
     @State private var disablesUDP: Bool
+    @State private var alternateHosts: [String]
     @State private var problem: Problem?
     @State private var alert: AlertState?
     @FocusState private var focusedField: Field?
@@ -49,6 +50,7 @@ struct ComputerEditor: View {
         _networkConfiguration = State(initialValue: computer.networkConfiguration)
         _keepsAlive = State(initialValue: computer.keepsAlive)
         _disablesUDP = State(initialValue: computer.disablesUDP)
+        _alternateHosts = State(initialValue: computer.alternateHosts)
     }
 
     private var trimmedUsername: String {
@@ -130,6 +132,7 @@ struct ComputerEditor: View {
                     }
                 }
                 if setup == nil {
+                    alternateHostsSection
                     Section {
                         Toggle("Enabled", isOn: $authenticates)
                         if authenticates {
@@ -199,6 +202,50 @@ struct ComputerEditor: View {
         }
     }
 
+    /// More addresses of the same computer, tried after the server address in this order.
+    private var alternateHostsSection: some View {
+        Section {
+            ForEach(alternateHosts.indices, id: \.self) { index in
+                HStack {
+                    TextField(
+                        "Address",
+                        text: Binding(
+                            get: { index < alternateHosts.count ? alternateHosts[index] : "" },
+                            set: { if index < alternateHosts.count { alternateHosts[index] = $0 } }),
+                        prompt: Text("Address"))
+                        #if os(iOS)
+                        .keyboardType(.URL)
+                        .textInputAutocapitalization(.never)
+                        #endif
+                        .autocorrectionDisabled()
+                    if index > 0 {
+                        Button {
+                            alternateHosts.swapAt(index, index - 1)
+                        } label: {
+                            Label("Move Up", systemImage: "arrow.up").labelStyle(.iconOnly)
+                        }
+                        .buttonStyle(.borderless)
+                    }
+                    Button(role: .destructive) {
+                        alternateHosts.remove(at: index)
+                    } label: {
+                        Label("Remove", systemImage: "minus.circle.fill").labelStyle(.iconOnly).foregroundStyle(.red)
+                    }
+                    .buttonStyle(.borderless)
+                }
+            }
+            Button {
+                alternateHosts.append("")
+            } label: {
+                Label("Add Address", systemImage: "plus.circle")
+            }
+        } header: {
+            Text("Other Addresses")
+        } footer: {
+            Text("Tried after the server address, in this order, when connecting; the first that answers is used.")
+        }
+    }
+
     private func save() {
         let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !name.isEmpty else {
@@ -232,6 +279,12 @@ struct ComputerEditor: View {
                 computer.usesHighPerformance = choice.usesHighPerformance
                 computer.keepsAlive = keepsAlive
                 computer.disablesUDP = disablesUDP
+                var others: [String] = []
+                for host in alternateHosts.map({ $0.trimmingCharacters(in: .whitespacesAndNewlines) })
+                where !host.isEmpty && host != address.host && !others.contains(host) {
+                    others.append(host)
+                }
+                computer.alternateHosts = others
             }
         } catch {
             alert = AlertState(String(localized: "Couldn’t Save “\(name)”"), error: error)

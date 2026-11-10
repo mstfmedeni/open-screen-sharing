@@ -103,6 +103,11 @@ enum AppDatabase {
                     arguments: [JSONSerialization.data(withJSONObject: mappings), name])
             }
         }
+        migrator.registerMigration("claudedeck.alternateHosts") { db in
+            try db.alter(table: "computers") { t in
+                t.add(column: "alternateHosts", .text).notNull().defaults(to: "[]")
+            }
+        }
         return migrator
     }()
 

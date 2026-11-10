@@ -126,7 +126,8 @@ private struct KeyboardSourceRequest {
 
 @Perceptible
 final class SessionController: Identifiable {
-    let route: SessionRoute
+    /// Its host can change to another of the computer's addresses (see `resolvesHost(then:)`).
+    private(set) var route: SessionRoute
     let title: String
     private(set) var phase: SessionPhase = .idle {
         didSet { SessionActivity.shared.set(self, active: phase.isActive) }
@@ -295,6 +296,8 @@ final class SessionController: Identifiable {
 
     @PerceptionIgnored private var server: ServerAuthentication?
     @PerceptionIgnored private var probeTask: Task<Void, Never>?
+    /// When the computer's addresses were last tried; a connection starting soon after uses the one found.
+    @PerceptionIgnored private var hostResolvedAt: Date?
     @PerceptionIgnored private var trustedFingerprint = ""
     @PerceptionIgnored private var allowsUnverifiedLogin = false
     @PerceptionIgnored private var passwordUpdate = PasswordUpdate.keep
@@ -362,6 +365,7 @@ final class SessionController: Identifiable {
         keepAlive.onExpiry = { [weak self] in self?.closeIfSuspending() }
         #endif
         if case .failed(let failure) = phase, failure.kind == .drawingFailed { return }
+        guard resolvesHost(then: { [weak self] in self?.start() }) else { return }
         let stored = computerID.flatMap { store.stored($0) }
         if let stored {
             restore(stored.memory)
@@ -539,8 +543,30 @@ final class SessionController: Identifiable {
         return density / info.framebufferPixelsPerCursorPixel
     }
 
+    /// A computer saved with more than one address: tries them in their order and moves the route to the first that
+    /// answers (the home network's at home, a VPN's away). True when there's nothing to try or it was just tried;
+    /// false while trying, `next` running once it has.
+    private func resolvesHost(then next: @escaping () -> Void) -> Bool {
+        if let at = hostResolvedAt, Date().timeIntervalSince(at) < 10 { return true }
+        guard route.remoteProtocol == .vnc || route.remoteProtocol == .rdp,
+            let computerID, let hosts = store.computer(computerID)?.hosts, hosts.count > 1
+        else { return true }
+        phase = .connecting
+        probeTask?.cancel()
+        probeTask = Task { [weak self, port = route.port] in
+            let host = await AddressRace.first(of: hosts, port: port)
+            guard let self, !Task.isCancelled else { return }
+            probeTask = nil
+            if let host, host != route.host { route.host = host }
+            hostResolvedAt = Date()
+            next()
+        }
+        return false
+    }
+
     private func connect(with credentials: SessionCredentials) {
         self.credentials = credentials
+        guard resolvesHost(then: { [weak self] in self?.connect(with: credentials) }) else { return }
         var keepsAlive = false
         var disablesUDP = false
         if let computerID, let computer = store.computer(computerID) {

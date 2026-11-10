@@ -64,6 +64,11 @@ final class ComputerStore {
         }
     }
 
+    /// The saved computer one of whose addresses is `address`.
+    func computer(reaching address: ComputerAddress, remoteProtocol: RemoteProtocol) -> Computer? {
+        computers.first { $0.remoteProtocol == remoteProtocol && $0.reaches(address) }
+    }
+
     func stored(_ id: UUID) -> StoredComputer? {
         guard let computer = computer(id) else { return nil }
         return StoredComputer(

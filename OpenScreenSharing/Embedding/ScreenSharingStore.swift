@@ -61,7 +61,9 @@ public final class ScreenSharingStore {
             default: return
             }
         }
-        guard let computer = ComputerStore.shared.computer(at: address, remoteProtocol: .vnc, username: nil) else {
+        guard let computer = ComputerStore.shared.computer(at: address, remoteProtocol: .vnc, username: nil)
+            ?? ComputerStore.shared.computer(reaching: address, remoteProtocol: .vnc)
+        else {
             // A computer not set up yet goes through the app's own setup, which signs in once, finds whether the
             // computer takes High Performance connections, and saves it with its options.
             setup = SetupRequest(link: RemoteLink(string: "vnc://\(address)"), name: name)
@@ -85,14 +87,36 @@ public final class ScreenSharingStore {
     /// Whether a Screen Sharing connection to `host` is in the list (observable: views update when one is saved).
     public func isSaved(host: String, port: Int? = nil) -> Bool {
         let address = ComputerAddress(host: host, port: port ?? ComputerAddress.defaultPort)
-        return ComputerStore.shared.computers.contains { $0.remoteProtocol == .vnc && $0.address.matches(address) }
+        return ComputerStore.shared.computer(reaching: address, remoteProtocol: .vnc) != nil
+    }
+
+    /// Keeps the saved computer at these addresses on all of them, in this order (the first is tried first): the
+    /// host app knows where the computer can be reached and its list changes. A computer is matched by any of
+    /// its addresses, or by `name`; the port and everything else stay as they are.
+    public func syncAddresses(_ hosts: [String], name: String? = nil, port: Int? = nil) {
+        var unique: [String] = []
+        for host in hosts.map({ $0.trimmingCharacters(in: .whitespacesAndNewlines) }) where !host.isEmpty && !unique.contains(host) {
+            unique.append(host)
+        }
+        guard let first = unique.first else { return }
+        let port = port ?? ComputerAddress.defaultPort
+        let saved = ComputerStore.shared.computers.filter { $0.remoteProtocol == .vnc && $0.port == port }
+        let matched = saved.first { computer in unique.contains { computer.reaches(ComputerAddress(host: $0, port: port)) } }
+            ?? name.flatMap { name in saved.first { $0.name == name } }
+        guard let computer = matched, computer.hosts != unique else { return }
+        _ = try? ComputerStore.shared.save(computer) {
+            $0.host = first
+            $0.alternateHosts = Array(unique.dropFirst())
+        }
     }
 
     /// Puts the computer at `host` in the list without connecting: the usual setup (signing in once, checking for
     /// High Performance) ending in Save. One already there opens its options instead.
     public func add(host: String, port: Int? = nil, name: String? = nil) {
         let address = ComputerAddress(host: host, port: port ?? ComputerAddress.defaultPort)
-        if let computer = ComputerStore.shared.computer(at: address, remoteProtocol: .vnc, username: nil) {
+        if let computer = ComputerStore.shared.computer(at: address, remoteProtocol: .vnc, username: nil)
+            ?? ComputerStore.shared.computer(reaching: address, remoteProtocol: .vnc)
+        {
             editing = computer
             return
         }

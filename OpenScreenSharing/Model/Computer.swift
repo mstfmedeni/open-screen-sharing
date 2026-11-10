@@ -23,6 +23,9 @@ nonisolated struct Computer: Codable, Identifiable, Hashable, FetchableRecord, P
     var trustedFingerprint = ""
     var keepsAlive = false
     var disablesUDP = false
+    /// More addresses of the same computer (a VPN's, another network's), tried after `host` in this order; the first
+    /// that answers is used.
+    var alternateHosts: [String] = []
 
     var quality = SessionQuality.adaptive
     var observes = false
@@ -81,6 +84,16 @@ nonisolated struct Computer: Codable, Identifiable, Hashable, FetchableRecord, P
             host = newValue.host
             port = newValue.port
         }
+    }
+
+    /// Every address, `host` first.
+    var hosts: [String] {
+        [host] + alternateHosts.filter { $0 != host }
+    }
+
+    /// Whether `address` is one of this computer's.
+    func reaches(_ address: ComputerAddress) -> Bool {
+        port == address.port && hosts.contains { ComputerAddress(host: $0, port: port).matches(address) }
     }
 
     var addressDescription: String {
