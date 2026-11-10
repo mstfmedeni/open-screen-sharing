@@ -179,6 +179,12 @@ final class SessionController: Identifiable {
     var isSystemPointerOverPicture = false
     private(set) var isKeyboardVisible = false
     #if os(iOS)
+    /// A keyboard is up and the computer's display kept the size it had before it (see `displayAreaDidChange`).
+    private(set) var holdsDisplayForKeyboard = false
+    /// The area left beside the keyboard, for `fitDisplayAroundKeyboard()`.
+    @PerceptionIgnored private var areaBesideKeyboard: CGSize?
+    #endif
+    #if os(iOS)
     private(set) var isMacKeyboardVisible = false
     private(set) var isTrackpadVisible = false
     #endif
@@ -1703,14 +1709,32 @@ final class SessionController: Identifiable {
         if showsKeyboard || isInputPanelVisible, displayArea.width > 0, scale == displayScale, screen == screenSize,
             area.width <= displayArea.width + 1, area.height <= displayArea.height + 1
         {
+            if area != displayArea {
+                areaBesideKeyboard = area
+                if !holdsDisplayForKeyboard { holdsDisplayForKeyboard = true }
+            }
             return
         }
+        areaBesideKeyboard = nil
+        if holdsDisplayForKeyboard { holdsDisplayForKeyboard = false }
         #endif
         displayArea = area
         displayScale = scale
         screenSize = screen
         requestVirtualDisplay(holdingPicture: true)
     }
+
+    #if os(iOS)
+    /// Fit Around Keyboard: the display takes the area the keyboard leaves (a keyboard kept up on a tablet, say), and
+    /// keeps it while the keyboard stays; hiding the keyboard gives it the whole area again.
+    func fitDisplayAroundKeyboard() {
+        guard let area = areaBesideKeyboard else { return }
+        areaBesideKeyboard = nil
+        holdsDisplayForKeyboard = false
+        displayArea = area
+        requestVirtualDisplay(holdingPicture: true)
+    }
+    #endif
 
     func windowSizeDidChange(_ size: CGSize) {
         guard size != windowSize else { return }
