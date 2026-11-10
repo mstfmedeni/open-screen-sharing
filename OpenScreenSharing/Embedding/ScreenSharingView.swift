@@ -1,4 +1,5 @@
 #if EMBEDDED && os(iOS)
+import Perception
 import SwiftUI
 
 /// The screen sharing tab of an app that embeds this one: the session while there is one, and the computers to
@@ -7,7 +8,7 @@ import SwiftUI
 /// The view can come and go freely; the session stays with ScreenSharingStore.
 @available(iOS 17, *)
 public struct ScreenSharingView: View {
-    @Bindable private var store = ScreenSharingStore.shared
+    @SwiftUI.Bindable private var store = ScreenSharingStore.shared
 
     public init() {}
 
@@ -31,6 +32,9 @@ public struct ScreenSharingView: View {
         }
         .onAppear { store.viewDidAppear() }
         .onDisappear { store.viewDidDisappear() }
+        // Outermost, so that sheets presented above get them too.
+        .perceptibleEnvironment(store.nearby)
+        .perceptibleEnvironment(store.availabilityMonitor)
     }
 }
 
@@ -61,8 +65,6 @@ private struct ScreenSharingComputers: View {
                 }
             }
         }
-        .environment(store.nearby)
-        .environment(store.availabilityMonitor)
         .sheet(item: $editing) { computer in
             ComputerEditor(computer: computer)
         }
@@ -91,6 +93,15 @@ private struct ScreenSharingComputers: View {
             store.availabilityMonitor.stop()
             store.nearby.stop()
         }
+    }
+}
+extension View {
+    /// Puts an object where the app's views read it with `@Environment(Type.self)`.
+    ///
+    /// Those views target iOS 15, so they read with Perception's back-port; SwiftUI's own `environment(_:)`, picked
+    /// for an Observable type in code that targets iOS 17, puts it where they don't look.
+    fileprivate func perceptibleEnvironment<T: AnyObject & Perceptible>(_ object: T) -> some View {
+        environment(object)
     }
 }
 #endif
