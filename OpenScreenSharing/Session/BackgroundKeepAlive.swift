@@ -6,6 +6,7 @@ import UIKit
 enum BackgroundConnection: String, Codable, CaseIterable, Identifiable {
     /// As long as iOS lets the app finish what it's doing, usually about half a minute.
     case system
+    case fiveMinutes
     case tenMinutes
     case thirtyMinutes
     case oneHour
@@ -16,6 +17,7 @@ enum BackgroundConnection: String, Codable, CaseIterable, Identifiable {
     var title: String.LocalizationValue {
         switch self {
         case .system: "Briefly"
+        case .fiveMinutes: "5 Minutes"
         case .tenMinutes: "10 Minutes"
         case .thirtyMinutes: "30 Minutes"
         case .oneHour: "1 Hour"
@@ -27,6 +29,7 @@ enum BackgroundConnection: String, Codable, CaseIterable, Identifiable {
     var duration: TimeInterval? {
         switch self {
         case .system: 0
+        case .fiveMinutes: 5 * 60
         case .tenMinutes: 10 * 60
         case .thirtyMinutes: 30 * 60
         case .oneHour: 60 * 60

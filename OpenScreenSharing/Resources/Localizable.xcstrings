@@ -965,6 +965,16 @@
         }
       }
     },
+    "5 Minutes" : {
+      "localizations" : {
+        "tr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "5 Dakika"
+          }
+        }
+      }
+    },
     "A New Nightly Build Is Available" : {
       "localizations" : {
         "ar" : {

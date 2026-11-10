@@ -95,7 +95,7 @@ final class AppSettings {
         showsKeyboardForTextFields = store.value(Bool.self, for: Key.showsKeyboardForTextFields) ?? true
         pictureFillsScreen = store.value(Bool.self, for: Key.pictureFillsScreen) ?? true
         usesMacKeyboard = store.value(Bool.self, for: Key.usesMacKeyboard) ?? true
-        backgroundConnection = store.value(BackgroundConnection.self, for: Key.backgroundConnection) ?? .always
+        backgroundConnection = store.value(BackgroundConnection.self, for: Key.backgroundConnection) ?? .fiveMinutes
         macKeyboardLayout = store.value(MacKeyboardLayoutID.self, for: Key.macKeyboardLayout) ?? .preferred
         inputPanel = store.value(InputPanelPlacement.self, for: Key.inputPanel) ?? InputPanelPlacement()
         #endif
