@@ -82,13 +82,6 @@ private struct ControlSettingsView: View {
                     Toggle(isOn: Binding(get: { settings.pinchZooms }, set: { settings.pinchZooms = $0 })) {
                         Label("Pinch to Zoom", systemImage: "arrow.up.left.and.down.right.magnifyingglass")
                     }
-                    Picker(selection: Binding(get: { settings.backgroundConnection }, set: { settings.backgroundConnection = $0 })) {
-                        ForEach(BackgroundConnection.allCases) { option in
-                            Text(String(localized: option.title)).tag(option)
-                        }
-                    } label: {
-                        Label("Stay Connected in Background", systemImage: "moon.zzz")
-                    }
                     Toggle(isOn: Binding(get: { settings.showsKeyboardForTextFields }, set: { settings.showsKeyboardForTextFields = $0 })) {
                         Label("Show Keyboard for Text Fields", systemImage: "keyboard")
                     }
@@ -96,6 +89,17 @@ private struct ControlSettingsView: View {
                     Text("Behavior")
                 } footer: {
                     Text("Shows the keyboard when you tap a text field on the computer. While no text field has focus, the first tap only focuses one. Tapping text that can be selected may also show it.")
+                }
+                Section {
+                    Picker(selection: Binding(get: { settings.backgroundConnection }, set: { settings.backgroundConnection = $0 })) {
+                        ForEach(BackgroundConnection.allCases) { option in
+                            Text(String(localized: option.title)).tag(option)
+                        }
+                    } label: {
+                        Label("Stay Connected in Background", systemImage: "moon.zzz")
+                    }
+                } footer: {
+                    Text("Keeps the connection open while you use other apps, for as long as you choose. Otherwise iOS ends it within about half a minute. This doesn’t keep the computer awake; for that, turn on Keep Alive in the computer’s options.")
                 }
                 Section {
                     Toggle(isOn: Binding(get: { settings.usesMacKeyboard }, set: { settings.usesMacKeyboard = $0 })) {

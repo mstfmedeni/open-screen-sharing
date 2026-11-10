@@ -168,6 +168,12 @@ struct ComputerEditor: View {
                         Toggle("Keep Alive", isOn: $keepsAlive)
                     } header: {
                         Text("Connection")
+                    } footer: {
+                        if choice == .rdp {
+                            Text("Keep Alive: after 30 seconds without input, sends a signal that changes nothing, so Windows doesn’t end an idle session or go to sleep.")
+                        } else {
+                            Text("Keep Alive: keeps the Mac awake, with no sleep or screen saver, for as long as you’re connected, even while this app is in the background or shows something else. When it’s off, the Mac is kept awake only while its screen is showing here.")
+                        }
                     }
                 }
             }

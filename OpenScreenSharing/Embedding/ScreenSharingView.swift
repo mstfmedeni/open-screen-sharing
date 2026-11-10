@@ -30,6 +30,19 @@ public struct ScreenSharingView: View {
                 store.connect(route)
             }
         }
+        .sheet(item: $store.editing) { computer in
+            ComputerEditor(computer: computer)
+        }
+        .sheet(isPresented: $store.showsSettings) {
+            NavigationStack {
+                SettingsView()
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            CloseButton { store.showsSettings = false }
+                        }
+                    }
+            }
+        }
         .onAppear { store.viewDidAppear() }
         .onDisappear { store.viewDidDisappear() }
         // Outermost, so that sheets presented above get them too.
@@ -43,8 +56,6 @@ private struct ScreenSharingComputers: View {
     let store: ScreenSharingStore
 
     @Environment(\.scenePhase) private var scenePhase
-    @State private var editing: Computer?
-    @State private var showsSettings = false
     @State private var isWatching = false
 
     var body: some View {
@@ -52,30 +63,17 @@ private struct ScreenSharingComputers: View {
             ComputersView(
                 connect: { route in store.connect(route) },
                 openInNewWindow: nil,
-                edit: { computer in editing = computer },
+                edit: { computer in store.editing = computer },
                 newConnection: { store.setup = SetupRequest() }
             )
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button {
-                        showsSettings = true
+                        store.showSettings()
                     } label: {
                         Label("Settings", systemImage: "gearshape")
                     }
                 }
-            }
-        }
-        .sheet(item: $editing) { computer in
-            ComputerEditor(computer: computer)
-        }
-        .sheet(isPresented: $showsSettings) {
-            NavigationStack {
-                SettingsView()
-                    .toolbar {
-                        ToolbarItem(placement: .cancellationAction) {
-                            CloseButton { showsSettings = false }
-                        }
-                    }
             }
         }
         .onAppear { setWatching(scenePhase != .background) }

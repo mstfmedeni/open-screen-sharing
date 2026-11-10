@@ -24,6 +24,10 @@ public final class ScreenSharingStore {
     /// A link that needs a new connection set up first, shown by ScreenSharingView.
     var setup: SetupRequest?
     var alert: AlertState?
+    /// A computer whose options ScreenSharingView shows.
+    var editing: Computer?
+    var showsSettings = false
+    @ObservationIgnored private var upgrade: Task<Void, Never>?
     @ObservationIgnored private var lookup: Task<Void, Never>?
 
     private init() {
@@ -57,10 +61,56 @@ public final class ScreenSharingStore {
             default: return
             }
         }
-        let computer =
-            ComputerStore.shared.computer(at: address, remoteProtocol: .vnc, username: nil)
-            ?? Computer(name: name ?? host, address: address)
-        connect(SessionRoute(computer: computer))
+        guard let computer = ComputerStore.shared.computer(at: address, remoteProtocol: .vnc, username: nil) else {
+            // A computer not set up yet goes through the app's own setup, which signs in once, finds whether the
+            // computer takes High Performance connections, and saves it with its options.
+            setup = SetupRequest(link: RemoteLink(string: "vnc://\(address)"))
+            return
+        }
+        guard computer.remoteProtocol == .vnc, !computer.usesHighPerformance, computer.authenticates,
+            !computer.password.isEmpty
+        else {
+            connect(SessionRoute(computer: computer))
+            return
+        }
+        // Saved before it was checked, as connect(host:) used to; check it now with its saved password.
+        upgrade?.cancel()
+        upgrade = Task {
+            let upgraded = await Self.upgradingToHighPerformance(computer)
+            guard !Task.isCancelled else { return }
+            connect(SessionRoute(computer: upgraded))
+        }
+    }
+
+    /// The computer saved for High Performance connections if it takes them, or as it was.
+    private static func upgradingToHighPerformance(_ computer: Computer) async -> Computer {
+        guard
+            case .success(let server) = await ServerProber.probe(
+                host: computer.host, port: computer.port, remoteProtocol: .vnc),
+            computer.trustedFingerprint.isEmpty || computer.trustedFingerprint == server.fingerprint,
+            case .success(let check) = await ServerProber.checkLogin(
+                server, credentials: .account(username: computer.username, password: computer.password)),
+            check.supportsHighPerformance
+        else { return computer }
+        do {
+            return try ComputerStore.shared.save(computer) {
+                $0.usesHighPerformance = true
+                $0.trustedFingerprint = check.fingerprint
+            }
+        } catch {
+            return computer
+        }
+    }
+
+    /// Shows the options of the computer connected to.
+    public func editConnection() {
+        guard let id = controller?.computerID, let computer = ComputerStore.shared.computer(id) else { return }
+        editing = computer
+    }
+
+    /// Shows the app's settings.
+    public func showSettings() {
+        showsSettings = true
     }
 
     /// Opens a vnc:// or rdp:// link. Returns false for anything else.
@@ -92,6 +142,7 @@ public final class ScreenSharingStore {
 
     /// Ends the session.
     public func disconnect() {
+        upgrade?.cancel()
         controller?.abort()
         controller = nil
     }

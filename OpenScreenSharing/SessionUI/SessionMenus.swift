@@ -277,6 +277,15 @@ struct SessionMoreMenuContent: View {
         Section {
             Button { controller.isCustomizingToolbar = true } label: { Label("Customize Toolbar…", systemImage: "slider.horizontal.3") }
         }
+        #if EMBEDDED
+        // Embedded, there's no Connections list or Settings tab behind the session to reach these from.
+        if #available(iOS 17, *) {
+            Section {
+                Button { ScreenSharingStore.shared.editConnection() } label: { Label("Edit Connection…", systemImage: "pencil") }
+                Button { ScreenSharingStore.shared.showSettings() } label: { Label("Settings…", systemImage: "gearshape") }
+            }
+        }
+        #endif
     }
 
     private func items(_ commands: [SessionCommand]) -> some View {
