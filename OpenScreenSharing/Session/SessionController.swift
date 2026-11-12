@@ -183,6 +183,9 @@ final class SessionController: Identifiable {
     private(set) var holdsDisplayForKeyboard = false
     /// The area left beside the keyboard, for `fitDisplayAroundKeyboard()`.
     @PerceptionIgnored private var areaBesideKeyboard: CGSize?
+    /// A smaller area waiting to be taken for the window's own once a keyboard's animation is over.
+    @PerceptionIgnored private var displaySettle: Task<Void, Never>?
+    @PerceptionIgnored private var inputVisibilityChangedAt: CFTimeInterval = 0
     #endif
     #if os(iOS)
     private(set) var isMacKeyboardVisible = false
@@ -1705,19 +1708,38 @@ final class SessionController: Identifiable {
         #if os(iOS)
         // A keyboard or the input panel takes part of the area only for a while: the computer's display keeps its size
         // and the picture fits what's left, rather than the display being resized on the way in and again on the way
-        // out. A rotation or another window size (a different screen) still resizes it.
-        if showsKeyboard || isInputPanelVisible, displayArea.width > 0, scale == displayScale, screen == screenSize,
+        // out. The hold ends when the area is back to the display's size, not when the keyboard goes: it's gone before
+        // the window finishes growing back, and the sizes in between would each resize the display. A rotation or
+        // another window size (a different screen) still resizes it.
+        displaySettle?.cancel()
+        displaySettle = nil
+        let inputUp = showsKeyboard || isInputPanelVisible
+        if inputUp || holdsDisplayForKeyboard, displayArea.width > 0, scale == displayScale, screen == screenSize,
             area.width <= displayArea.width + 1, area.height <= displayArea.height + 1
         {
-            if area != displayArea {
-                areaBesideKeyboard = area
-                if !holdsDisplayForKeyboard { holdsDisplayForKeyboard = true }
+            if abs(area.width - displayArea.width) <= 1, abs(area.height - displayArea.height) <= 1 {
+                areaBesideKeyboard = nil
+                if holdsDisplayForKeyboard { holdsDisplayForKeyboard = false }
+                return
             }
+            areaBesideKeyboard = area
+            if !holdsDisplayForKeyboard { holdsDisplayForKeyboard = true }
+            // No keyboard and the area stays smaller once things are still: the window itself got smaller.
+            if !inputUp { settleDisplayArea(area, scale: scale, screen: screen) }
             return
         }
         areaBesideKeyboard = nil
         if holdsDisplayForKeyboard { holdsDisplayForKeyboard = false }
+        // Just after a keyboard came or went (as after Fit Around Keyboard), the area grows in steps: only the last one.
+        if CACurrentMediaTime() - inputVisibilityChangedAt < Self.displaySettleDelay {
+            settleDisplayArea(area, scale: scale, screen: screen)
+            return
+        }
         #endif
+        applyDisplayArea(area, scale: scale, screen: screen)
+    }
+
+    private func applyDisplayArea(_ area: CGSize, scale: CGFloat, screen: CGSize) {
         displayArea = area
         displayScale = scale
         screenSize = screen
@@ -1725,10 +1747,32 @@ final class SessionController: Identifiable {
     }
 
     #if os(iOS)
+    private static let displaySettleDelay: CFTimeInterval = 0.5
+
+    private func settleDisplayArea(_ area: CGSize, scale: CGFloat, screen: CGSize) {
+        displaySettle = Task { [weak self] in
+            try? await Task.sleep(nanoseconds: UInt64(Self.displaySettleDelay * 1_000_000_000))
+            guard let self, !Task.isCancelled else { return }
+            self.displaySettle = nil
+            guard !self.showsKeyboard, !self.isInputPanelVisible else { return }
+            self.areaBesideKeyboard = nil
+            if self.holdsDisplayForKeyboard { self.holdsDisplayForKeyboard = false }
+            self.applyDisplayArea(area, scale: scale, screen: screen)
+        }
+    }
+
+    private func inputVisibilityDidChange() {
+        inputVisibilityChangedAt = CACurrentMediaTime()
+    }
+    #endif
+
+    #if os(iOS)
     /// Fit Around Keyboard: the display takes the area the keyboard leaves (a keyboard kept up on a tablet, say), and
     /// keeps it while the keyboard stays; hiding the keyboard gives it the whole area again.
     func fitDisplayAroundKeyboard() {
         guard let area = areaBesideKeyboard else { return }
+        displaySettle?.cancel()
+        displaySettle = nil
         areaBesideKeyboard = nil
         holdsDisplayForKeyboard = false
         displayArea = area
@@ -1996,11 +2040,13 @@ final class SessionController: Identifiable {
     func setMacKeyboardVisible(_ visible: Bool) {
         guard visible != isMacKeyboardVisible else { return }
         if visible { screen?.setKeyboardVisible(false) }
+        inputVisibilityDidChange()
         withAnimation(.smoothCompat(duration: 0.25)) { isMacKeyboardVisible = visible }
     }
 
     func setTrackpadVisible(_ visible: Bool) {
         guard visible != isTrackpadVisible else { return }
+        inputVisibilityDidChange()
         withAnimation(.smoothCompat(duration: 0.25)) { isTrackpadVisible = visible }
     }
 
@@ -2018,6 +2064,9 @@ final class SessionController: Identifiable {
     #endif
 
     func keyboardVisibilityDidChange(_ visible: Bool) {
+        #if os(iOS)
+        if visible != isKeyboardVisible { inputVisibilityDidChange() }
+        #endif
         isKeyboardVisible = visible
     }
 
