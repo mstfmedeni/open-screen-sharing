@@ -91,7 +91,6 @@ public final class ScreenSharingStore {
                 return
             }
             route.usesHighPerformance = true
-            route.deviceType = upgraded.deviceType
             connect(route)
         }
     }

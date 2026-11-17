@@ -22,6 +22,7 @@ struct ComputerEditor: View {
     @State private var keepsAlive: Bool
     @State private var disablesUDP: Bool
     @State private var alternateHosts: [String]
+    @State private var reversesScrolling: Bool
     @State private var problem: Problem?
     @State private var alert: AlertState?
     @FocusState private var focusedField: Field?
@@ -51,6 +52,7 @@ struct ComputerEditor: View {
         _keepsAlive = State(initialValue: computer.keepsAlive)
         _disablesUDP = State(initialValue: computer.disablesUDP)
         _alternateHosts = State(initialValue: computer.alternateHosts)
+        _reversesScrolling = State(initialValue: computer.reversesScrolling)
     }
 
     private var trimmedUsername: String {
@@ -114,8 +116,7 @@ struct ComputerEditor: View {
                             Text("Internet").tag(NetworkQuality.internet)
                         }
                         .pickerStyle(.menu)
-                        // The iPad negotiated 60 fps in the mode-5 capture (observed on iPad17,1, iPadOS 27.2 24B5099f).
-                        if networkConfiguration.quality == .internet, computer.deviceType == .mac {
+                        if networkConfiguration.quality == .internet {
                             Picker("Maximum Frame Rate", selection: $networkConfiguration.internetMaximumFrameRate) {
                                 ForEach(MaximumFrameRate.allCases) { rate in
                                     Text("\(rate.rawValue) FPS").tag(rate)
@@ -178,6 +179,13 @@ struct ComputerEditor: View {
                         } else {
                             Text("Keep Alive: keeps the Mac awake, with no sleep or screen saver, for as long as you’re connected, even while this app is in the background or shows something else. When it’s off, the Mac is kept awake only while its screen is showing here.")
                         }
+                    }
+                }
+                if choice != .appleVNC {
+                    Section {
+                        Toggle("Reverse Scroll Direction", isOn: $reversesScrolling)
+                    } header: {
+                        Text("Control")
                     }
                 }
             }
@@ -285,6 +293,7 @@ struct ComputerEditor: View {
                     others.append(host)
                 }
                 computer.alternateHosts = others
+                computer.reversesScrolling = choice != .appleVNC && reversesScrolling
             }
         } catch {
             alert = AlertState(String(localized: "Couldn’t Save “\(name)”"), error: error)

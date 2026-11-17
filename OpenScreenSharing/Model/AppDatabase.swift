@@ -108,6 +108,11 @@ enum AppDatabase {
                 t.add(column: "alternateHosts", .text).notNull().defaults(to: "[]")
             }
         }
+        migrator.registerMigration("1.0.8") { db in
+            try db.alter(table: "computers") { t in
+                t.add(column: "reversesScrolling", .boolean).notNull().defaults(to: false)
+            }
+        }
         return migrator
     }()
 
