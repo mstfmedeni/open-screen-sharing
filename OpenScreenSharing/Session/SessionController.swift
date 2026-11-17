@@ -354,7 +354,12 @@ final class SessionController: Identifiable {
             guard let self else { return false }
             return self.phase.isActive && !self.isClosing
         }
-        keepAlive.onExpiry = { [weak self] in self?.closeIfSuspending() }
+        // The background task begun on leaving doesn't run out while the app is kept running, so it ends here, or
+        // closeIfSuspending() would keep waiting for it.
+        keepAlive.onExpiry = { [weak self] in
+            self?.endBackgroundTask()
+            self?.closeIfSuspending()
+        }
         #endif
         if case .failed(let failure) = phase, failure.kind == .drawingFailed { return }
         guard resolvesHost(then: { [weak self] in self?.start() }) else { return }
