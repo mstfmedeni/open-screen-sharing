@@ -3,13 +3,29 @@ import Perception
 import SwiftUI
 import UIKit
 
+/// What the on-screen Mac keyboard drives: the screen-sharing session, or a host app's own input
+/// (ClaudeDeck's terminal keyboard).
+protocol MacKeyboardInput: AnyObject {
+    var stickyModifiers: Set<ModifierKey> { get }
+    var lockedModifiers: Set<ModifierKey> { get }
+    var pressedModifiers: Set<ModifierKey> { get }
+    var isControlling: Bool { get }
+    func enterText(_ text: String)
+    func typeKey(_ key: MacKey)
+    func toggleSticky(_ modifier: ModifierKey)
+    func setModifier(_ modifier: ModifierKey, locked: Bool)
+    func setModifier(_ modifier: ModifierKey, pressed: Bool)
+}
+
+extension SessionController: MacKeyboardInput {}
+
 /// A Mac keyboard drawn on screen. Keys go to the computer as they're touched; modifier keys share their state with
 /// the keyboard accessory bar.
 struct MacKeyboardView: View {
     static let keySpacing: CGFloat = 5
     static let padding: CGFloat = 4
 
-    let controller: SessionController
+    let controller: any MacKeyboardInput
     let layout: MacKeyboardLayoutID
     let rowHeight: CGFloat
     let isCompact: Bool
@@ -230,7 +246,7 @@ private struct MacModifierKeyCap: View {
     private static let holdDelay: TimeInterval = 0.3
     private static let doubleTapInterval: TimeInterval = 0.35
 
-    let controller: SessionController
+    let controller: any MacKeyboardInput
     let modifier: ModifierKey
     let rowHeight: CGFloat
 
